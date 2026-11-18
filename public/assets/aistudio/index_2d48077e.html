@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Pasillo de los Recuerdos | Para Ti</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- GSAP for smooth UI animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #0c0a1d;
+            color: #f3f4f6;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+        /* Custom scrollbar for modals and panels */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(236, 72, 153, 0.4);
+            border-radius: 3px;
+        }
+        .glass {
+            background: rgba(20, 18, 38, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .card-flip {
+            perspective: 1000px;
+        }
+        .card-inner {
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="h-full relative select-none">
+
+    <!-- Three.js Canvas Container -->
+    <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <!-- UI Layer -->
+    <div class="relative z-10 h-full flex flex-col justify-between pointer-events-none p-4 md:p-8">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center pointer-events-auto">
+            <div class="glass px-5 py-2.5 rounded-full flex items-center space-x-3 shadow-lg shadow-purple-950/30">
+                <div class="w-2.5 h-2.5 rounded-full bg-pink-500 animate-ping"></div>
+                <h1 id="header-title" class="font-serif text-lg md:text-xl text-pink-200 tracking-wide">Alex & Sofía</h1>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <!-- Audio Toggle Button -->
+                <button id="audio-btn" class="glass w-11 h-11 rounded-full flex items-center justify-center text-pink-300 hover:text-white hover:bg-white/10 transition-all shadow-lg group" title="Música ambiental">
+                    <i class="fa-solid fa-music group-hover:scale-110 transition-transform"></i>
+                </button>
+                <!-- Config / Creator Button -->
+                <button id="config-btn" class="glass w-11 h-11 rounded-full flex items-center justify-center text-pink-300 hover:text-white hover:bg-white/10 transition-all shadow-lg group" title="Personalizar Regalo">
+                    <i class="fa-solid fa-gear group-hover:rotate-90 transition-transform duration-500"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Center Guide / Counter -->
+        <div class="self-center text-center pointer-events-auto transition-opacity duration-700" id="hud-guide">
+            <div class="glass px-6 py-3 rounded-2xl shadow-2xl border border-pink-500/20 inline-block mb-3">
+                <p class="text-xs uppercase tracking-widest text-pink-300 mb-1 font-medium">Juntos desde</p>
+                <p id="hud-timer" class="font-serif text-lg md:text-2xl text-white font-semibold">0 días, 0 horas, 0 mins</p>
+            </div>
+            <div class="flex items-center justify-center space-x-2 text-xs md:text-sm text-pink-200/80 bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/5">
+                <i class="fa-solid fa-hand-pointer text-pink-400 animate-bounce"></i>
+                <span>Haz clic en cualquier cuadro de la galería para explorar los recuerdos</span>
+            </div>
+        </div>
+
+        <!-- Footer Navigation / Controls hint -->
+        <footer class="flex justify-between items-center pointer-events-auto">
+            <div class="glass px-4 py-2 rounded-xl hidden md:flex items-center space-x-4 text-xs text-pink-200/70">
+                <span class="flex items-center space-x-1"><kbd class="px-1.5 py-0.5 bg-white/10 rounded">WASD</kbd> o <kbd class="px-1.5 py-0.5 bg-white/10 rounded">Flechas</kbd> para caminar</span>
+                <span>•</span>
+                <span class="flex items-center space-x-1"><span>Arrastra para mirar alrededor</span></span>
+            </div>
+
+            <div class="glass px-4 py-2 rounded-xl flex items-center space-x-3 ml-auto md:ml-0">
+                <button id="reset-cam-btn" class="text-xs text-pink-300 hover:text-white flex items-center space-x-1.5 transition-colors">
+                    <i class="fa-solid fa-compass"></i>
+                    <span>Volver al inicio</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Memory Modal (Fullscreen Zoom & Flip) -->
+    <div id="memory-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl opacity-0 pointer-events-none transition-opacity duration-500">
+        <div class="relative w-full max-w-xl glass rounded-3xl p-6 md:p-8 shadow-2xl border border-pink-500/30 transform scale-95 transition-transform duration-500" id="modal-content">
+            
+            <!-- Close Modal Button -->
+            <button id="close-modal-btn" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-pink-500/20 flex items-center justify-center text-pink-200 hover:text-white transition-all">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <!-- Card Flip Container -->
+            <div class="card-flip w-full h-[380px] md:h-[420px] cursor-pointer" id="flip-card">
+                <div class="card-inner relative w-full h-full rounded-2xl shadow-inner">
+                    
+                    <!-- Front Side (Photo & Title) -->
+                    <div class="card-front absolute inset-0 w-full h-full bg-gradient-to-br from-purple-950/80 to-slate-900/90 rounded-2xl p-4 flex flex-col border border-white/10 overflow-hidden">
+                        <div class="relative w-full h-64 md:h-72 rounded-xl overflow-hidden mb-4 shadow-md bg-black/50">
+                            <img id="modal-img" src="" alt="Recuerdo" class="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                            <span id="modal-date" class="absolute bottom-3 left-3 text-xs bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-pink-300 font-medium border border-white/10">Fecha</span>
+                        </div>
+                        <div class="text-center flex-1 flex flex-col justify-center">
+                            <h2 id="modal-title" class="font-serif text-xl md:text-2xl text-white font-semibold mb-1">Título del recuerdo</h2>
+                            <p class="text-xs text-pink-300/80 flex items-center justify-center space-x-1">
+                                <i class="fa-solid fa-rotate text-xs animate-spin" style="animation-duration: 4s;"></i>
+                                <span>Haz clic en la tarjeta para leer la nota al reverso</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Back Side (Note / Description) -->
+                    <div class="card-back absolute inset-0 w-full h-full bg-gradient-to-br from-slate-900 to-purple-950/90 rounded-2xl p-6 md:p-8 flex flex-col justify-between border border-pink-500/30 overflow-y-auto">
+                        <div>
+                            <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+                                <span class="font-serif text-pink-300 text-sm italic">Nota de amor</span>
+                                <i class="fa-solid fa-heart text-pink-500"></i>
+                            </div>
+                            <h3 id="modal-back-title" class="font-serif text-lg text-white font-medium mb-3"></h3>
+                            <p id="modal-desc" class="text-sm md:text-base text-gray-200 leading-relaxed font-light whitespace-pre-line"></p>
+                        </div>
+                        <div class="text-center pt-4 border-t border-white/10">
+                            <span class="text-xs text-pink-400 font-medium">Haz clic de nuevo para voltear</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Modal Nav / Action bar -->
+            <div class="flex justify-between items-center mt-6 pt-4 border-t border-white/10">
+                <button id="prev-memory-btn" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-pink-200 flex items-center space-x-2 transition-colors">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Anterior</span>
+                </button>
+                <span id="memory-counter" class="text-xs text-gray-400 font-medium">1 / 6</span>
+                <button id="next-memory-btn" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-pink-200 flex items-center space-x-2 transition-colors">
+                    <span>Siguiente</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Config / Creator Panel Drawer -->
+    <div id="config-panel" class="fixed inset-y-0 right-0 z-50 w-full max-w-md glass transform translate-x-full transition-transform duration-500 flex flex-col shadow-2xl border-l border-white/10">
+        <div class="p-6 border-b border-white/10 flex justify-between items-center">
+            <h2 class="font-serif text-xl text-white font-semibold flex items-center space-x-2">
+                <i class="fa-solid fa-sliders text-pink-400"></i>
+                <span>Personalizar Galería</span>
+            </h2>
+            <button id="close-config-btn" class="w-9 h-9 rounded-full bg-white/10 hover:bg-pink-500/20 flex items-center justify-center text-pink-200 hover:text-white transition-all">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+            <!-- General Settings -->
+            <div class="space-y-4">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-pink-400">Detalles de la pareja</h3>
+                <div>
+                    <label class="block text-xs text-gray-300 mb-1.5 font-medium">Nombres de la pareja</label>
+                    <input type="text" id="input-couple-names" class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-500 transition-colors" value="Alex & Sofía">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-300 mb-1.5 font-medium">Fecha de inicio de relación</label>
+                    <input type="date" id="input-start-date" class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-500 transition-colors" value="2022-10-14">
+                </div>
+            </div>
+
+            <hr class="border-white/10">
+
+            <!-- Memories List Editor -->
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-pink-400">Cuadros y Recuerdos (<span id="memory-count-label">6</span>)</h3>
+                    <button id="add-memory-btn" class="px-3 py-1.5 rounded-lg bg-pink-600/30 hover:bg-pink-600/50 text-xs text-pink-200 border border-pink-500/30 transition-all flex items-center space-x-1">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Añadir Recuerdo</span>
+                    </button>
+                </div>
+                <div id="memories-editor-list" class="space-y-4">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Footer with Share & Save -->
+        <div class="p-6 border-t border-white/10 bg-black/30 flex space-x-3">
+            <button id="save-config-btn" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium text-sm shadow-lg hover:shadow-pink-600/30 hover:opacity-95 transition-all">
+                Guardar y Aplicar
+            </button>
+            <button id="share-link-btn" class="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm transition-all" title="Copiar enlace para compartir">
+                <i class="fa-solid fa-share-nodes"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 glass px-6 py-3 rounded-full text-sm text-white shadow-2xl border border-pink-500/30 opacity-0 pointer-events-none transition-all duration-300 flex items-center space-x-2">
+        <i class="fa-solid fa-circle-check text-pink-400"></i>
+        <span id="toast-msg">¡Cambios guardados con éxito!</span>
+    </div>
+
+    <!-- Main JavaScript Application -->
+    <script>
+        // --- DEFAULT DATA & STATE ---
+        const DEFAULT_DATA = {
+            names: "Alex & Sofía",
+            startDate: "2022-10-14",
+            memories: [
+                {
+                    title: "Nuestra primera cita",
+                    date: "14 Octubre, 2022",
+                    img: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=800&auto=format&fit=crop",
+                    desc: "Esa tarde en el café del centro parecía que el tiempo se había detenido. Recuerdo que estabas nerviosa y pediste un té de manzanilla, y al sonreír supe que mi vida entera cambiaría desde ese preciso instante."
+                },
+                {
+                    title: "Bajo las estrellas",
+                    date: "10 Enero, 2023",
+                    img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=800&auto=format&fit=crop",
+                    desc: "Pasamos toda la noche en la playa viendo la lluvia de estrellas. Ninguno tenía frío porque nos cubría la misma manta y las risas no paraban. Pedí un deseo: estar siempre a tu lado."
+                },
+                {
+                    title: "Nuestro primer viaje juntos",
+                    date: "15 Julio, 2023",
+                    img: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=800&auto=format&fit=crop",
+                    desc: "Perdidos en las calles empOdradas de esa hermosa ciudad europea. Caminamos sin rumbo fijo durante horas, comiendo helado derretido y tomando fotos a cada rincón que nos robaba el aliento."
+                },
+                {
+                    title: "Un café y una tarde de lluvia",
+                    date: "22 Noviembre, 2023",
+                    img: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800&auto=format&fit=crop",
+                    desc: "La tormenta afuera rugía con fuerza, pero adentro, junto a la ventana y con olor a café recién hecho y libros viejos, sentí la paz más absoluta que jamás había conocido en mis brazos."
+                },
+                {
+                    title: "Celebrando nuestro aniversario",
+                    date: "14 Octubre, 2024",
+                    img: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?q=80&w=800&auto=format&fit=crop",
+                    desc: "Una cena hermosa a la luz de las velas. Brindamos por nosotros, por todo lo superado y por los sueños que aún nos faltan por cumplir juntos. Te amo hoy más que ayer."
+                },
+                {
+                    title: "Atardecer inolvidable",
+                    date: "5 Mayo, 2025",
+                    img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=800&auto=format&fit=crop",
+                    desc: "El cielo se tiñó de tonos dorados y violetas mientras el sol se ocultaba en el horizonte. Tomé tu mano con fuerza, sabiendo que no hay lugar en el mundo donde prefiera estar sino contigo."
+                }
+            ]
+        };
+
+        // Load data from URL params (Base64) or localStorage or fallback to default
+        function loadAppData() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const encodedData = urlParams.get('data');
+                if (encodedData) {
+                    const jsonString = decodeURIComponent(atob(encodedData));
+                    return JSON.parse(jsonString);
+                }
+                const saved = localStorage.getItem('art_gallery_couple_data');
+                if (saved) {
+                    return JSON.parse(saved);
+                }
+            } catch (e) {
+                console.error("Error loading saved data, using defaults", e);
+            }
+            return DEFAULT_DATA;
+        }
+
+        let appData = loadAppData();
+        let currentMemoryIndex = 0;
+        let isAudioPlaying = false;
+        let audioCtx = null;
+        let ambientOscillators = [];
+
+        // --- THREE.JS GALLERY SCENE SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0c0a1d, 0.025);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.6, 8);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        container.appendChild(renderer.domElement);
+
+        // OrbitControls for smooth navigation
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02; // Don't go below floor
+        controls.minDistance = 2;
+        controls.maxDistance = 25;
+        controls.target.set(0, 1.6, 0);
+
+        // --- LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0x2d1b4e, 1.2);
+        scene.add(ambientLight);
+
+        const hemiLight = new THREE.HemisphereLight(0xffb6c1, 0x1a103c, 0.8);
+        scene.add(hemiLight);
+
+        // --- ENVIRONMENT (Passageway, Floor, Ceiling, Pillars) ---
+        const galleryLength = 36;
+        const corridorWidth = 6;
+        const corridorHeight = 4.5;
+
+        // Floor (Reflective Water / Polished Marble)
+        const floorGeo = new THREE.PlaneGeometry(corridorWidth, galleryLength);
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: 0x0f0c1b,
+            roughness: 0.15,
+            metalness: 0.8,
+        });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.set(0, 0, -galleryLength / 2 + 4);
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Ceiling
+        const ceilingGeo = new THREE.PlaneGeometry(corridorWidth, galleryLength);
+        const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x090714, roughness: 0.9 });
+        const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
+        ceiling.rotation.x = Math.PI / 2;
+        ceiling.position.set(0, corridorHeight, -galleryLength / 2 + 4);
+        scene.add(ceiling);
+
+        // Starry / Nebular Sky Box (Dome)
+        const domeGeo = new THREE.SphereGeometry(300, 32, 32);
+        const domeMat = new THREE.MeshBasicMaterial({
+            color: 0x05030a,
+            side: THREE.BackSide
+        });
+        const dome = new THREE.Mesh(domeGeo, domeMat);
+        scene.add(dome);
+
+        // Floating Dust / Fireflies Particles
+        const particleCount = 400;
+        const particleGeo = new THREE.BufferGeometry();
+        const particlePos = new Float32Array(particleCount * 3);
+        for(let i = 0; i < particleCount * 3; i += 3) {
+            particlePos[i] = (Math.random() - 0.5) * 40;
+            particlePos[i+1] = Math.random() * corridorHeight;
+            particlePos[i+2] = (Math.random() - 0.5) * galleryLength;
+        }
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+        const particleMat = new THREE.PointsMaterial({
+            color: 0xffd1dc,
+            size: 0.08,
+            transparent: true,
+            opacity: 0.7,
+            blending: THREE.AdditiveBlending
+        });
+        const particleSystem = new THREE.Points(particleGeo, particleMat);
+        scene.add(particleSystem);
+
+        // --- ART FRAMES GENERATION ---
+        const textureLoader = new THREE.TextureLoader();
+        const framesGroup = new THREE.Group();
+        scene.add(framesGroup);
+
+        const frameMeshes = [];
+
+        function buildGalleryFrames() {
+            // Clear existing frames
+            while(framesGroup.children.length > 0){ 
+                framesGroup.remove(framesGroup.children[0]); 
+            }
+            frameMeshes.length = 0;
+
+            const memories = appData.memories;
+            const spacing = 5.5;
+            const startZ = 2;
+
+            memories.forEach((mem, index) => {
+                const side = index % 2 === 0 ? -1 : 1; // Left or Right wall
+                const zPos = startZ - Math.floor(index / 2) * spacing;
+                const xPos = side * (corridorWidth / 2 - 0.05);
+
+                const frameGroup = new THREE.Group();
+                frameGroup.position.set(xPos, 2.1, zPos);
+                frameGroup.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
+
+                // Frame Border Geometry
+                const frameWidth = 2.2;
+                const frameHeight = 1.6;
+                const borderSize = 0.1;
+
+                const outerGeo = new THREE.BoxGeometry(frameWidth + borderSize*2, frameHeight + borderSize*2, 0.08);
+                const frameMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.3, metalness: 0.8 }); // Gold trim
+                const outerMesh = new THREE.Mesh(outerGeo, frameMat);
+                outerMesh.castShadow = true;
+                frameGroup.add(outerMesh);
+
+                // Painting Canvas (Texture)
+                const canvasGeo = new THREE.PlaneGeometry(frameWidth, frameHeight);
+                
+                // Load texture with fallback placeholder
+                const texture = textureLoader.load(
+                    mem.img, 
+                    (tex) => { tex.colorSpace = THREE.SRGBColorSpace; },
+                    undefined,
+                    (err) => { console.warn("Failed to load image texture, using fallback"); }
+                );
+
+                const canvasMat = new THREE.MeshBasicMaterial({ map: texture });
+                const canvasMesh = new THREE.Mesh(canvasGeo, canvasMat);
+                canvasMesh.position.z = 0.05;
+                frameGroup.add(canvasMesh);
+
+                // Spotlight on frame
+                const spotLight = new THREE.SpotLight(0xfff5e6, 2.5, 7, Math.PI / 4, 0.5, 1);
+                spotLight.position.set(0, corridorHeight - 0.2, zPos + (side * 1.5));
+                spotLight.target = canvasMesh;
+                scene.add(spotLight);
+
+                // Small plaque underneath
+                const plaqueGeo = new THREE.BoxGeometry(0.6, 0.15, 0.02);
+                const plaqueMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5, metalness: 0.5 });
+                const plaque = new THREE.Mesh(plaqueGeo, plaqueMat);
+                plaque.position.set(0, -frameHeight/2 - 0.2, 0.05);
+                frameGroup.add(plaque);
+
+                // Store reference for raycasting
+                canvasMesh.userData = { memoryIndex: index, group: frameGroup };
+                frameMeshes.push(canvasMesh);
+
+                framesGroup.add(frameGroup);
+            });
+        }
+
+        buildGalleryFrames();
+
+        // --- RAYCASTING & INTERACTION ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let hoveredMesh = null;
+
+        window.addEventListener('pointermove', (e) => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        window.addEventListener('click', (e) => {
+            // Ignore if clicking on UI elements
+            if (e.target.closest('#config-panel') || e.target.closest('#memory-modal') || e.target.closest('header') || e.target.closest('footer')) return;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(frameMeshes);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                const memIndex = hit.userData.memoryIndex;
+                openMemoryModal(memIndex);
+
+                // Smooth camera zoom towards frame
+                const targetPos = hit.userData.group.position.clone();
+                const camOffset = targetPos.clone().addScaledVector(hit.userData.group.getWorldDirection(new THREE.Vector3()), -2.5);
+                camOffset.y = targetPos.y; // Keep height steady
+
+                gsap.to(camera.position, {
+                    x: camOffset.x,
+                    y: camOffset.y,
+                    z: camOffset.z,
+                    duration: 1.5,
+                    ease: "power2.inOut"
+                });
+
+                gsap.to(controls.target, {
+                    x: targetPos.x,
+                    y: targetPos.y,
+                    z: targetPos.z,
+                    duration: 1.5,
+                    ease: "power2.inOut"
+                });
+            }
+        });
+
+        // --- KEYBOARD NAVIGATION (WASD / Arrows) ---
+        const keys = {};
+        window.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+        function updateMovement(delta) {
+            const speed = 4.0 * delta;
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            forward.y = 0;
+            forward.normalize();
+
+            const right = new THREE.Vector3();
+            right.crossVectors(camera.up, forward).normalize();
+
+            if (keys['w'] || keys['arrowup']) camera.position.addScaledVector(forward, speed);
+            if (keys['s'] || keys['arrowdown']) camera.position.addScaledVector(forward, -speed);
+            if (keys['a'] || keys['arrowleft']) camera.position.addScaledVector(right, speed);
+            if (keys['d'] || keys['arrowright']) camera.position.addScaledVector(right, -speed);
+
+            // Clamp camera inside gallery bounds
+            camera.position.x = Math.max(-corridorWidth/2 + 0.8, Math.min(corridorWidth/2 - 0.8, camera.position.x));
+            camera.position.z = Math.max(-galleryLength + 6, Math.min(6, camera.position.z));
+            camera.position.y = 1.6; // Lock eye level height
+        }
+
+        // --- MODAL & UI LOGIC ---
+        const modal = document.getElementById('memory-modal');
+        const modalContent = document.getElementById('modal-content');
+        const modalImg = document.getElementById('modal-img');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBackTitle = document.getElementById('modal-back-title');
+        const modalDate = document.getElementById('modal-date');
+        const modalDesc = document.getElementById('modal-desc');
+        const memoryCounter = document.getElementById('memory-counter');
+        const flipCard = document.getElementById('flip-card');
+
+        function openMemoryModal(index) {
+            currentMemoryIndex = index;
+            const mem = appData.memories[index];
+            modalImg.src = mem.img;
+            modalTitle.textContent = mem.title;
+            modalBackTitle.textContent = mem.title;
+            modalDate.textContent = mem.date;
+            modalDesc.textContent = mem.desc;
+            memoryCounter.textContent = `${index + 1} / ${appData.memories.length}`;
+
+            // Reset card flip
+            flipCard.querySelector('.card-inner').classList.remove('flipped');
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modalContent.classList.remove('scale-95');
+            modalContent.classList.add('scale-100');
+        }
+
+        function closeMemoryModal() {
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        document.getElementById('close-modal-btn').addEventListener('click', closeMemoryModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeMemoryModal();
+        });
+
+        // Flip Card interaction
+        flipCard.addEventListener('click', () => {
+            flipCard.querySelector('.card-inner').classList.toggle('flipped');
+        });
+
+        document.getElementById('prev-memory-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentMemoryIndex = (currentMemoryIndex - 1 + appData.memories.length) % appData.memories.length;
+            openMemoryModal(currentMemoryIndex);
+        });
+
+        document.getElementById('next-memory-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentMemoryIndex = (currentMemoryIndex + 1) % appData.memories.length;
+            openMemoryModal(currentMemoryIndex);
+        });
+
+        // Reset Camera
+        document.getElementById('reset-cam-btn').addEventListener('click', () => {
+            gsap.to(camera.position, { x: 0, y: 1.6, z: 8, duration: 1.5, ease: "power2.inOut" });
+            gsap.to(controls.target, { x: 0, y: 1.6, z: 0, duration: 1.5, ease: "power2.inOut" });
+        });
+
+        // --- TIMER / HUD ---
+        function updateTimer() {
+            const start = new Date(appData.startDate);
+            const now = new Date();
+            const diff = now - start;
+
+            if (diff < 0) {
+                document.getElementById('hud-timer').textContent = "¡Pronto comenzará!";
+                return;
+            }
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((diff / 1000 / 60) % 60);
+
+            document.getElementById('hud-timer').textContent = `${days} días, ${hours} hrs, ${minutes} mins`;
+        }
+        setInterval(updateTimer, 1000);
+        updateTimer();
+
+        // --- CONFIG PANEL & CREATOR MODE ---
+        const configBtn = document.getElementById('config-btn');
+        const closeConfigBtn = document.getElementById('close-config-btn');
+        const configPanel = document.getElementById('config-panel');
+        const saveConfigBtn = document.getElementById('save-config-btn');
+        const shareLinkBtn = document.getElementById('share-link-btn');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-msg');
+
+        configBtn.addEventListener('click', () => {
+            configPanel.classList.remove('translate-x-full');
+            populateConfigForm();
+        });
+
+        closeConfigBtn.addEventListener('click', () => {
+            configPanel.classList.add('translate-x-full');
+        });
+
+        function showToast(msg) {
+            toastMsg.textContent = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        function populateConfigForm() {
+            document.getElementById('input-couple-names').value = appData.names;
+            document.getElementById('input-start-date').value = appData.startDate;
+            document.getElementById('header-title').textContent = appData.names;
+
+            const listContainer = document.getElementById('memories-editor-list');
+            listContainer.innerHTML = '';
+            document.getElementById('memory-count-label').textContent = appData.memories.length;
+
+            appData.memories.forEach((mem, idx) => {
+                const item = document.createElement('div');
+                item.className = 'glass p-4 rounded-xl space-y-3 border border-white/10';
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-semibold text-pink-300">Cuadro #${idx + 1}</span>
+                        <button onclick="removeMemory(${idx})" class="text-xs text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-gray-300 mb-1">Título</label>
+                        <input type="text" data-index="${idx}" data-field="title" class="mem-input w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500" value="${mem.title}">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-gray-300 mb-1">Fecha</label>
+                        <input type="text" data-index="${idx}" data-field="date" class="mem-input w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500" value="${mem.date}">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-gray-300 mb-1">URL de Imagen</label>
+                        <input type="text" data-index="${idx}" data-field="img" class="mem-input w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500" value="${mem.img}">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-gray-300 mb-1">Nota romántica (Reverso)</label>
+                        <textarea data-index="${idx}" data-field="desc" rows="2" class="mem-input w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500 resize-none">${mem.desc}</textarea>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        window.removeMemory = function(idx) {
+            if (appData.memories.length <= 1) {
+                showToast("Debes mantener al menos un recuerdo.");
+                return;
+            }
+            appData.memories.splice(idx, 1);
+            populateConfigForm();
+        }
+
+        document.getElementById('add-memory-btn').addEventListener('click', () => {
+            appData.memories.push({
+                title: "Nuevo Recuerdo",
+                date: "Fecha especial",
+                img: "https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=800&auto=format&fit=crop",
+                desc: "Escribe aquí un momento inolvidable..."
+            });
+            populateConfigForm();
+        });
+
+        saveConfigBtn.addEventListener('click', () => {
+            appData.names = document.getElementById('input-couple-names').value;
+            appData.startDate = document.getElementById('input-start-date').value;
+
+            // Collect inputs from editor
+            document.querySelectorAll('.mem-input').forEach(input => {
+                const idx = input.getAttribute('data-index');
+                const field = input.getAttribute('data-field');
+                appData.memories[idx][field] = input.value;
+            });
+
+            localStorage.setItem('art_gallery_couple_data', JSON.stringify(appData));
+            document.getElementById('header-title').textContent = appData.names;
+            buildGalleryFrames();
+            configPanel.classList.add('translate-x-full');
+            showToast("¡Galería actualizada con éxito!");
+        });
+
+        shareLinkBtn.addEventListener('click', () => {
+            const jsonStr = JSON.stringify(appData);
+            const encoded = btoa(encodeURIComponent(jsonStr));
+            const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    showToast("¡Enlace copiado al portapapeles!");
+                }).catch(() => {
+                    prompt("Copia este enlace para compartir:", shareUrl);
+                });
+            } else {
+                prompt("Copia este enlace para compartir:", shareUrl);
+            }
+        });
+
+        // --- AMBIENT SYNTHETIC AUDIO (Web Audio API) ---
+        const audioBtn = document.getElementById('audio-btn');
+        audioBtn.addEventListener('click', toggleAudio);
+
+        function toggleAudio() {
+            if (!isAudioPlaying) {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const notes = [261.63, 329.63, 392.00, 523.25, 659.25]; // C major chord arpeggio vibe
+                    
+                    notes.forEach((freq, i) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                        gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start();
+                        ambientOscillators.push({ osc, gain });
+                    });
+
+                    isAudioPlaying = true;
+                    audioBtn.classList.add('bg-pink-600/30', 'text-white');
+                    showToast("Música ambiental activada");
+                } catch(e) {
+                    console.error("Audio error", e);
+                }
+            } else {
+                if (audioCtx) {
+                    audioCtx.close();
+                    audioCtx = null;
+                }
+                ambientOscillators = [];
+                isAudioPlaying = false;
+                audioBtn.classList.remove('bg-pink-600/30', 'text-white');
+                showToast("Música ambiental desactivada");
+            }
+        }
+
+        // --- ANIMATION LOOP ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            updateMovement(delta);
+            controls.update();
+
+            // Rotate particles slowly
+            particleSystem.rotation.y += delta * 0.02;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // --- WINDOW RESIZE ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>
