@@ -61,8 +61,8 @@ export function MemoryModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-xl rounded-3xl border border-white/15 bg-[#141026] p-5 md:p-7 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-xl overflow-y-auto rounded-3xl border border-white/15 bg-[#141026] p-4 sm:p-5 md:p-7 shadow-2xl">
+        <div className="mb-3 sm:mb-4 flex items-center justify-between">
           <span
             data-testid="memory-modal-counter"
             className="text-xs font-medium text-rose-200/90 tabular-nums"
@@ -86,12 +86,12 @@ export function MemoryModal({
           onClick={() => setIsFlipped((prev) => !prev)}
           aria-pressed={isFlipped}
           aria-label={isFlipped ? 'Mostrar fotografía' : 'Voltear tarjeta para leer la nota'}
-          className="card-flip block w-full h-[380px] md:h-[420px] text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 rounded-2xl"
+          className="card-flip block w-full min-h-[220px] h-[min(380px,calc(100dvh-10.5rem))] md:h-[min(420px,calc(100dvh-11.5rem))] text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 rounded-2xl"
         >
           <div className={`card-inner relative h-full w-full rounded-2xl ${isFlipped ? 'flipped' : ''}`}>
             {/* Front Side: Photo & Title */}
-            <div className="card-front absolute inset-0 flex h-full w-full flex-col overflow-hidden rounded-2xl bg-[#1b1533] p-4">
-              <div className="relative mb-4 h-64 md:h-72 w-full overflow-hidden rounded-xl bg-[#0e0b1b]">
+            <div className="card-front absolute inset-0 flex h-full w-full flex-col overflow-hidden rounded-2xl bg-[#1b1533] p-3.5 sm:p-4">
+              <div className="relative mb-3 sm:mb-4 h-[58%] min-h-[110px] w-full overflow-hidden rounded-xl bg-[#0e0b1b]">
                 {!imageFailed && memory.img ? (
                   <img
                     src={resolveGalleryImageUrl(memory.img, import.meta.env.BASE_URL)}
@@ -101,7 +101,7 @@ export function MemoryModal({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#2b173c] via-[#18122b] to-[#341a2f] p-6 text-center">
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#2b173c] via-[#18122b] to-[#341a2f] p-4 sm:p-6 text-center">
                     <ImageOff className="h-8 w-8 text-rose-200/70" aria-hidden="true" />
                     <p className="font-display text-lg text-stone-200">{memory.title}</p>
                     <p className="text-xs text-stone-400">No se pudo cargar la fotografía externa</p>

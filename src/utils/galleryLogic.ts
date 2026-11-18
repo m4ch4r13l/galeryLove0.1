@@ -407,4 +407,79 @@ export function detectMobileTouchDevice(signals: TouchEnvironmentSignals): boole
   return false;
 }
 
+/**
+ * Returns drag-to-look sensitivity in radians per pixel.
+ * Touch / pen pointers on mobile screens receive higher sensitivity for comfortable turning.
+ */
+export function getDragLookSensitivity(pointerType: string): number {
+  return pointerType === 'touch' || pointerType === 'pen' ? 0.0085 : 0.0034;
+}
+
+export function shouldSkipWelcomeScreen(search: string): boolean {
+  try {
+    const params = new URLSearchParams(search);
+    return params.get('autostart') === '1';
+  } catch {
+    return false;
+  }
+}
+
+export interface FullscreenElementLike {
+  requestFullscreen?: () => Promise<void> | void;
+  webkitRequestFullscreen?: () => Promise<void> | void;
+}
+
+export interface ScreenOrientationLike {
+  lock?: (orientation: 'landscape' | 'landscape-primary' | 'portrait') => Promise<void>;
+}
+
+export interface ImmersiveModeResult {
+  fullscreenEntered: boolean;
+  orientationLocked: boolean;
+}
+
+/**
+ * Requests browser fullscreen first (required by mobile browsers before orientation lock),
+ * then attempts to lock mobile orientation to landscape inside the same user gesture.
+ */
+export async function requestImmersiveMode(options: {
+  element: FullscreenElementLike | null;
+  screenOrientation?: ScreenOrientationLike | null;
+  isMobileTouch: boolean;
+}): Promise<ImmersiveModeResult> {
+  if (!options.isMobileTouch) {
+    return { fullscreenEntered: false, orientationLocked: false };
+  }
+
+  let fullscreenEntered = false;
+  let orientationLocked = false;
+
+  const el = options.element;
+  if (el) {
+    try {
+      if (typeof el.requestFullscreen === 'function') {
+        await el.requestFullscreen();
+        fullscreenEntered = true;
+      } else if (typeof el.webkitRequestFullscreen === 'function') {
+        await el.webkitRequestFullscreen();
+        fullscreenEntered = true;
+      }
+    } catch {
+      fullscreenEntered = false;
+    }
+  }
+
+  if (options.screenOrientation?.lock) {
+    try {
+      await options.screenOrientation.lock('landscape');
+      orientationLocked = true;
+    } catch {
+      orientationLocked = false;
+    }
+  }
+
+  return { fullscreenEntered, orientationLocked };
+}
+
+
 

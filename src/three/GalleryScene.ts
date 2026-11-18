@@ -4,6 +4,7 @@ import type { CorridorLayout, MemoryItem } from '../types/gallery';
 import {
   computeCorridorLayout,
   computeLookAngles,
+  getDragLookSensitivity,
   resolveGalleryImageUrl,
   shortestAngleDelta,
 } from '../utils/galleryLogic';
@@ -892,7 +893,7 @@ export class GallerySceneController {
 
       if (dx !== 0 || dy !== 0) {
         this.cameraTransitionActive = false;
-        const sensitivity = 0.0034;
+        const sensitivity = getDragLookSensitivity(e.pointerType);
         this.yaw += dx * sensitivity;
         this.pitch = THREE.MathUtils.clamp(
           this.pitch + dy * sensitivity,

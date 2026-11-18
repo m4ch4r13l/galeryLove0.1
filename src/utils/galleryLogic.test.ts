@@ -9,12 +9,15 @@ import {
   decodeShareData,
   detectMobileTouchDevice,
   encodeShareData,
+  getDragLookSensitivity,
   isValidImageSource,
   loadGalleryData,
   parseLocalDate,
+  requestImmersiveMode,
   resolveGalleryImageUrl,
   saveGalleryData,
   shortestAngleDelta,
+  shouldSkipWelcomeScreen,
   validateGalleryData,
   type StorageLike,
 } from './galleryLogic';
@@ -226,6 +229,78 @@ test('resolveGalleryImageUrl normalizes local asset paths for GitHub Pages subpa
   );
   assert.equal(isValidImageSource('./src/assets/images/photo.jpg'), true);
 });
+
+test('getDragLookSensitivity boosts sensitivity on touch/pen compared to mouse', () => {
+  const touchSens = getDragLookSensitivity('touch');
+  const penSens = getDragLookSensitivity('pen');
+  const mouseSens = getDragLookSensitivity('mouse');
+  assert.ok(touchSens > mouseSens * 2);
+  assert.equal(touchSens, penSens);
+});
+
+test('shouldSkipWelcomeScreen checks autostart=1 query param', () => {
+  assert.equal(shouldSkipWelcomeScreen('?autostart=1'), true);
+  assert.equal(shouldSkipWelcomeScreen('?data=abc&autostart=1'), true);
+  assert.equal(shouldSkipWelcomeScreen('?autostart=0'), false);
+  assert.equal(shouldSkipWelcomeScreen(''), false);
+});
+
+test('requestImmersiveMode enters fullscreen before locking mobile orientation to landscape', async () => {
+  const calls: string[] = [];
+  const res = await requestImmersiveMode({
+    isMobileTouch: true,
+    element: {
+      requestFullscreen: async () => {
+        calls.push('fullscreen');
+      },
+    },
+    screenOrientation: {
+      lock: async (mode) => {
+        calls.push(`orientation:${mode}`);
+      },
+    },
+  });
+  assert.deepEqual(calls, ['fullscreen', 'orientation:landscape']);
+  assert.equal(res.fullscreenEntered, true);
+  assert.equal(res.orientationLocked, true);
+
+  // Desktop must NOT trigger fullscreen or orientation lock
+  const desktopCalls: string[] = [];
+  const desktopRes = await requestImmersiveMode({
+    isMobileTouch: false,
+    element: {
+      requestFullscreen: async () => {
+        desktopCalls.push('fullscreen');
+      },
+    },
+    screenOrientation: {
+      lock: async (mode) => {
+        desktopCalls.push(`orientation:${mode}`);
+      },
+    },
+  });
+  assert.deepEqual(desktopCalls, []);
+  assert.equal(desktopRes.fullscreenEntered, false);
+  assert.equal(desktopRes.orientationLocked, false);
+
+  // Handles browser rejection gracefully without throwing
+  const fallbackRes = await requestImmersiveMode({
+    isMobileTouch: true,
+    element: {
+      requestFullscreen: async () => {
+        throw new Error('NotAllowedError');
+      },
+    },
+    screenOrientation: {
+      lock: async () => {
+        throw new Error('NotSupportedError');
+      },
+    },
+  });
+  assert.equal(fallbackRes.fullscreenEntered, false);
+  assert.equal(fallbackRes.orientationLocked, false);
+});
+
 
 
 

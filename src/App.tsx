@@ -3,13 +3,18 @@ import { CheckCircle2 } from 'lucide-react';
 import { ConfigDrawer } from './components/ConfigDrawer';
 import { GalleryHUD } from './components/GalleryHUD';
 import { MemoryModal } from './components/MemoryModal';
+import { WelcomeModal } from './components/WelcomeModal';
 import { useMobileTouch } from './hooks/useMobileTouch';
 import { GallerySceneController } from './three/GalleryScene';
 import type { GalleryData } from './types/gallery';
 import {
   calculateRelationshipDuration,
   loadGalleryData,
+  requestImmersiveMode,
   saveGalleryData,
+  shouldSkipWelcomeScreen,
+  type FullscreenElementLike,
+  type ScreenOrientationLike,
 } from './utils/galleryLogic';
 import { AmbientMusicEngine } from './utils/proceduralAudio';
 
@@ -35,6 +40,9 @@ export default function App() {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   const [isDockCollapsed, setIsDockCollapsed] = useState(false);
+  const [hasEntered, setHasEntered] = useState<boolean>(() =>
+    shouldSkipWelcomeScreen(typeof window !== 'undefined' ? window.location.search : '')
+  );
   const [webglUnavailable, setWebglUnavailable] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [nowTick, setNowTick] = useState(() => new Date());
@@ -175,19 +183,45 @@ export default function App() {
     }
   }, [isPointerLocked, showToast]);
 
+  const handleEnterGallery = useCallback(async () => {
+    setHasEntered(true);
+    if (!isMobileTouch) return;
+
+    const result = await requestImmersiveMode({
+      element: document.documentElement as unknown as FullscreenElementLike,
+      screenOrientation: (typeof screen !== 'undefined'
+        ? screen.orientation
+        : null) as unknown as ScreenOrientationLike | null,
+      isMobileTouch,
+    });
+    if (
+      !result.orientationLocked &&
+      typeof window !== 'undefined' &&
+      window.innerHeight > window.innerWidth
+    ) {
+      showToast('Gira tu teléfono en horizontal para una mejor vista');
+    }
+  }, [isMobileTouch, showToast]);
+
   useEffect(() => {
-    if (isConfigOpen || activeMemoryIndex !== null || isDockCollapsed) {
+    if (!hasEntered || isConfigOpen || activeMemoryIndex !== null || isDockCollapsed) {
       sceneRef.current?.setVirtualWalk(0, 0);
     }
-    if (isConfigOpen || activeMemoryIndex !== null) {
+    if (!hasEntered || isConfigOpen || activeMemoryIndex !== null) {
       sceneRef.current?.exitPointerLock();
     }
-  }, [isConfigOpen, activeMemoryIndex, isDockCollapsed]);
+  }, [hasEntered, isConfigOpen, activeMemoryIndex, isDockCollapsed]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || isConfigOpen || activeMemoryIndex !== null) {
+      if (
+        !hasEntered ||
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        isConfigOpen ||
+        activeMemoryIndex !== null
+      ) {
         return;
       }
       if (e.key.toLowerCase() === 'f') {
@@ -197,7 +231,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isConfigOpen, activeMemoryIndex, handleTogglePointerLock]);
+  }, [hasEntered, isConfigOpen, activeMemoryIndex, handleTogglePointerLock]);
 
   return (
     <main className="relative h-full w-full overflow-hidden bg-[#0b0917] select-none">
@@ -236,7 +270,17 @@ export default function App() {
         </div>
       )}
 
-      {!webglUnavailable && (
+      {!webglUnavailable && !hasEntered && (
+        <WelcomeModal
+          coupleNames={galleryData.names}
+          duration={duration}
+          memoryCount={galleryData.memories.length}
+          isMobileTouch={isMobileTouch}
+          onEnter={() => void handleEnterGallery()}
+        />
+      )}
+
+      {!webglUnavailable && hasEntered && (
         <GalleryHUD
           coupleNames={galleryData.names}
           duration={duration}

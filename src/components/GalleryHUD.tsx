@@ -58,7 +58,7 @@ export function GalleryHUD({
   const focusedMemory = memories[focusedIndex] ?? memories[0];
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-10 flex flex-col justify-between p-4 md:p-6">
+    <div className="pointer-events-none fixed inset-0 z-10 flex flex-col justify-between p-3 sm:p-4 md:p-6 [@media(max-height:460px)]:p-2.5">
       {/* Top Bar — minimal 2-edge layout keeping center 3D vista completely open */}
       <header className="pointer-events-auto flex items-center justify-between gap-2.5 sm:gap-4">
         <div className="min-w-0 flex flex-col sm:flex-row sm:items-baseline sm:gap-4 rounded-xl border border-white/12 bg-[#0f0c1c]/90 px-3.5 sm:px-4 py-2 sm:py-2.5 shadow-lg">
@@ -134,7 +134,7 @@ export function GalleryHUD({
       {/* Collapsible Bottom Control Dock & Touch Joystick */}
       <div className="pointer-events-none flex flex-col items-center">
         {isMobileTouch && !isDockCollapsed && (
-          <div className="pointer-events-none mb-3 flex w-full max-w-3xl justify-start">
+          <div className="pointer-events-none mb-2 sm:mb-3 [@media(max-height:460px)]:mb-1.5 flex w-full max-w-3xl justify-start">
             <div className="pointer-events-auto">
               <TouchJoystick onMove={(fwd, str) => onWalkChange(fwd, str)} />
             </div>
