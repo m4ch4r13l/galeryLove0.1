@@ -13,11 +13,19 @@ import {
 } from './utils/galleryLogic';
 import { AmbientMusicEngine } from './utils/proceduralAudio';
 
+function getSafeLocalStorage(): Storage | null {
+  try {
+    return typeof window !== 'undefined' ? window.localStorage : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const [galleryData, setGalleryData] = useState<GalleryData>(() =>
     loadGalleryData(
       typeof window !== 'undefined' ? window.location.search : '',
-      typeof window !== 'undefined' ? window.localStorage : null
+      getSafeLocalStorage()
     )
   );
   const [activeMemoryIndex, setActiveMemoryIndex] = useState<number | null>(null);
@@ -99,7 +107,11 @@ export default function App() {
   const handleSaveConfig = useCallback(
     (updated: GalleryData) => {
       setGalleryData(updated);
-      saveGalleryData(updated, window.localStorage);
+      try {
+        saveGalleryData(updated, getSafeLocalStorage());
+      } catch {
+        // Ignore storage quota / privacy mode write restrictions
+      }
       setFocusedIndex((prev) => Math.min(prev, updated.memories.length - 1));
       sceneRef.current?.buildFrames(updated.memories);
       setIsConfigOpen(false);
