@@ -4,6 +4,7 @@ import type { CorridorLayout, MemoryItem } from '../types/gallery';
 import {
   computeCorridorLayout,
   computeLookAngles,
+  resolveGalleryImageUrl,
   shortestAngleDelta,
 } from '../utils/galleryLogic';
 import {
@@ -631,8 +632,9 @@ export class GallerySceneController {
       this.interactableMeshes.push(artMesh);
 
       if (mem.img) {
+        const resolvedImgUrl = resolveGalleryImageUrl(mem.img, import.meta.env.BASE_URL);
         this.textureLoader.load(
-          mem.img,
+          resolvedImgUrl,
           (loadedTex) => {
             if (this.disposed) {
               loadedTex.dispose();

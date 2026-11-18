@@ -9,8 +9,10 @@ import {
   decodeShareData,
   detectMobileTouchDevice,
   encodeShareData,
+  isValidImageSource,
   loadGalleryData,
   parseLocalDate,
+  resolveGalleryImageUrl,
   saveGalleryData,
   shortestAngleDelta,
   validateGalleryData,
@@ -197,5 +199,33 @@ test('detectMobileTouchDevice identifies phones/tablets and excludes desktop mou
     true
   );
 });
+
+test('resolveGalleryImageUrl normalizes local asset paths for GitHub Pages subpaths', () => {
+  assert.equal(
+    resolveGalleryImageUrl('./src/assets/images/photo.jpg', './'),
+    './src/assets/images/photo.jpg'
+  );
+  // Legacy saved paths with leading slash normalize to relative under './'
+  assert.equal(
+    resolveGalleryImageUrl('/src/assets/images/photo.jpg', './'),
+    './src/assets/images/photo.jpg'
+  );
+  // Explicit repository subpath base
+  assert.equal(
+    resolveGalleryImageUrl('/src/assets/images/photo.jpg', '/mi-galeria/'),
+    '/mi-galeria/src/assets/images/photo.jpg'
+  );
+  // External and data URLs pass through unchanged
+  assert.equal(
+    resolveGalleryImageUrl('https://example.com/pic.jpg', '/mi-galeria/'),
+    'https://example.com/pic.jpg'
+  );
+  assert.equal(
+    resolveGalleryImageUrl('data:image/jpeg;base64,ABC', './'),
+    'data:image/jpeg;base64,ABC'
+  );
+  assert.equal(isValidImageSource('./src/assets/images/photo.jpg'), true);
+});
+
 
 

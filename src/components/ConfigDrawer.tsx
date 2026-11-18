@@ -89,7 +89,7 @@ export function ConfigDrawer({
           id: createMemoryId(prev.memories.length),
           title: 'Nuevo recuerdo',
           date: 'Fecha especial',
-          img: '/src/assets/images/memory_anniversary_1795027782628.jpg',
+          img: './src/assets/images/memory_anniversary_1795027782628.jpg',
           desc: 'Escribe aquí un momento inolvidable compartido juntos.',
         },
       ],

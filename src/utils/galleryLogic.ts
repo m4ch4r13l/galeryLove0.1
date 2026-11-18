@@ -18,42 +18,42 @@ export const DEFAULT_GALLERY_DATA: GalleryData = {
       id: 'mem-1',
       title: 'Nuestra primera cita',
       date: '14 Octubre, 2022',
-      img: '/src/assets/images/memory_first_date_1795027781706.jpg',
+      img: './src/assets/images/memory_first_date_1795027781706.jpg',
       desc: 'Esa tarde en el café del centro parecía que el tiempo se había detenido. Recuerdo que estabas nerviosa y pediste un té de manzanilla, y al sonreír supe que mi vida entera cambiaría desde ese preciso instante.',
     },
     {
       id: 'mem-2',
       title: 'Bajo las estrellas',
       date: '10 Enero, 2023',
-      img: '/src/assets/images/memory_starry_beach_1795027781376.jpg',
+      img: './src/assets/images/memory_starry_beach_1795027781376.jpg',
       desc: 'Pasamos toda la noche en la playa viendo la lluvia de estrellas. Ninguno tenía frío porque nos cubría la misma manta y las risas no paraban. Pedí un deseo: estar siempre a tu lado.',
     },
     {
       id: 'mem-3',
       title: 'Nuestro primer viaje juntos',
       date: '15 Julio, 2023',
-      img: '/src/assets/images/memory_europe_trip_1795027780809.jpg',
+      img: './src/assets/images/memory_europe_trip_1795027780809.jpg',
       desc: 'Perdidos en las calles empedradas de esa hermosa ciudad europea. Caminamos sin rumbo fijo durante horas, comiendo helado derretido y tomando fotos a cada rincón que nos robaba el aliento.',
     },
     {
       id: 'mem-4',
       title: 'Un café y una tarde de lluvia',
       date: '22 Noviembre, 2023',
-      img: '/src/assets/images/memory_rainy_coffee_1795027782964.jpg',
+      img: './src/assets/images/memory_rainy_coffee_1795027782964.jpg',
       desc: 'La tormenta afuera rugía con fuerza, pero adentro, junto a la ventana y con olor a café recién hecho y libros viejos, sentí la paz más absoluta que jamás había conocido entre tus brazos.',
     },
     {
       id: 'mem-5',
       title: 'Celebrando nuestro aniversario',
       date: '14 Octubre, 2024',
-      img: '/src/assets/images/memory_anniversary_1795027782628.jpg',
+      img: './src/assets/images/memory_anniversary_1795027782628.jpg',
       desc: 'Una cena hermosa a la luz de las velas. Brindamos por nosotros, por todo lo superado y por los sueños que aún nos faltan por cumplir juntos. Te amo hoy más que ayer.',
     },
     {
       id: 'mem-6',
       title: 'Atardecer inolvidable',
       date: '5 Mayo, 2025',
-      img: '/src/assets/images/memory_sunset_horizon_1795027782769.jpg',
+      img: './src/assets/images/memory_sunset_horizon_1795027782769.jpg',
       desc: 'El cielo se tiñó de tonos dorados y violetas mientras el sol se ocultaba en el horizonte. Tomé tu mano con fuerza, sabiendo que no hay lugar en el mundo donde prefiera estar sino contigo.',
     },
   ],
@@ -200,9 +200,32 @@ export function isValidImageSource(src: string): boolean {
     trimmed.startsWith('https://') ||
     trimmed.startsWith('http://') ||
     trimmed.startsWith('/src/') ||
+    trimmed.startsWith('./src/') ||
+    trimmed.startsWith('src/') ||
     trimmed.startsWith('/assets/') ||
+    trimmed.startsWith('./assets/') ||
     trimmed.startsWith('data:image/')
   );
+}
+
+/**
+ * Resolves memory image URLs safely across root domains and GitHub Pages subpaths
+ * (e.g. https://user.github.io/repo-name/), preserving external URLs and data URIs.
+ */
+export function resolveGalleryImageUrl(src: string, baseUrl = './'): string {
+  const trimmed = src.trim();
+  if (!trimmed) return '';
+  if (
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:')
+  ) {
+    return trimmed;
+  }
+  const normalizedBase = !baseUrl ? './' : baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  const relativePath = trimmed.replace(/^\.\//, '').replace(/^\/+/, '');
+  return `${normalizedBase}${relativePath}`;
 }
 
 export function validateGalleryData(data: GalleryData): ValidationResult {

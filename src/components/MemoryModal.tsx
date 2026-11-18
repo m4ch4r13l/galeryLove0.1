@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, Heart, ImageOff, RotateCw, X } from 'lucide-react';
 import type { MemoryItem } from '../types/gallery';
+import { resolveGalleryImageUrl } from '../utils/galleryLogic';
 
 interface MemoryModalProps {
   memories: MemoryItem[];
@@ -93,7 +94,7 @@ export function MemoryModal({
               <div className="relative mb-4 h-64 md:h-72 w-full overflow-hidden rounded-xl bg-[#0e0b1b]">
                 {!imageFailed && memory.img ? (
                   <img
-                    src={memory.img}
+                    src={resolveGalleryImageUrl(memory.img, import.meta.env.BASE_URL)}
                     alt={memory.title}
                     referrerPolicy="no-referrer"
                     onError={() => setImageFailed(true)}
