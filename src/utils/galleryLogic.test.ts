@@ -5,6 +5,7 @@ import {
   STORAGE_KEY,
   calculateRelationshipDuration,
   computeCorridorLayout,
+  computeDragLookDelta,
   computeLookAngles,
   decodeShareData,
   detectMobileTouchDevice,
@@ -236,6 +237,19 @@ test('getDragLookSensitivity boosts sensitivity on touch/pen compared to mouse',
   const mouseSens = getDragLookSensitivity('mouse');
   assert.ok(touchSens > mouseSens * 2);
   assert.equal(touchSens, penSens);
+});
+
+test('computeDragLookDelta inverts horizontal camera yaw on mobile touch/pen', () => {
+  // Swiping right (dx > 0) on touch produces negative yaw (camera turns right in Three.js)
+  const touchRight = computeDragLookDelta(20, 0, 'touch');
+  assert.ok(touchRight.yawDelta < 0);
+
+  const penLeft = computeDragLookDelta(-20, 0, 'pen');
+  assert.ok(penLeft.yawDelta > 0);
+
+  // Desktop mouse keeps positive yaw on rightward drag
+  const mouseRight = computeDragLookDelta(20, 0, 'mouse');
+  assert.ok(mouseRight.yawDelta > 0);
 });
 
 test('shouldSkipWelcomeScreen checks autostart=1 query param', () => {

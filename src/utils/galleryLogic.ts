@@ -415,6 +415,23 @@ export function getDragLookSensitivity(pointerType: string): number {
   return pointerType === 'touch' || pointerType === 'pen' ? 0.0085 : 0.0034;
 }
 
+/**
+ * Computes yaw/pitch deltas for drag-to-look.
+ * On mobile touch/pen, horizontal drag is inverted so dragging right rotates the camera right.
+ */
+export function computeDragLookDelta(
+  dx: number,
+  dy: number,
+  pointerType: string
+): { yawDelta: number; pitchDelta: number } {
+  const sensitivity = getDragLookSensitivity(pointerType);
+  const isTouchLike = pointerType === 'touch' || pointerType === 'pen';
+  return {
+    yawDelta: (isTouchLike ? -dx : dx) * sensitivity,
+    pitchDelta: dy * sensitivity,
+  };
+}
+
 export function shouldSkipWelcomeScreen(search: string): boolean {
   try {
     const params = new URLSearchParams(search);

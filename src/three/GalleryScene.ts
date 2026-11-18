@@ -3,8 +3,8 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import type { CorridorLayout, MemoryItem } from '../types/gallery';
 import {
   computeCorridorLayout,
+  computeDragLookDelta,
   computeLookAngles,
-  getDragLookSensitivity,
   resolveGalleryImageUrl,
   shortestAngleDelta,
 } from '../utils/galleryLogic';
@@ -827,11 +827,23 @@ export class GallerySceneController {
     this.lastPointerPos.y = e.clientY;
     this.lookPointerId = e.pointerId;
     this.renderer.domElement.style.cursor = 'grabbing';
+    try {
+      this.renderer.domElement.setPointerCapture?.(e.pointerId);
+    } catch {
+      // Ignore synthetic events without active pointer capture support
+    }
   }
 
   private onPointerCancel(e: PointerEvent) {
     if (e.pointerId === this.lookPointerId) {
       this.lookPointerId = null;
+      try {
+        if (this.renderer.domElement.hasPointerCapture?.(e.pointerId)) {
+          this.renderer.domElement.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        // Ignore
+      }
       if (!this.isPointerLocked) {
         this.renderer.domElement.style.cursor = this.hoveredIndex !== null ? 'pointer' : 'grab';
       }
@@ -845,6 +857,13 @@ export class GallerySceneController {
 
     const wasDragging = this.lookPointerId !== null;
     this.lookPointerId = null;
+    try {
+      if (this.renderer.domElement.hasPointerCapture?.(e.pointerId)) {
+        this.renderer.domElement.releasePointerCapture(e.pointerId);
+      }
+    } catch {
+      // Ignore
+    }
     if (!this.isPointerLocked && wasDragging) {
       this.renderer.domElement.style.cursor = this.hoveredIndex !== null ? 'pointer' : 'grab';
     }
@@ -893,10 +912,10 @@ export class GallerySceneController {
 
       if (dx !== 0 || dy !== 0) {
         this.cameraTransitionActive = false;
-        const sensitivity = getDragLookSensitivity(e.pointerType);
-        this.yaw += dx * sensitivity;
+        const { yawDelta, pitchDelta } = computeDragLookDelta(dx, dy, e.pointerType);
+        this.yaw += yawDelta;
         this.pitch = THREE.MathUtils.clamp(
-          this.pitch + dy * sensitivity,
+          this.pitch + pitchDelta,
           -this.maxPitch,
           this.maxPitch
         );
@@ -1024,20 +1043,21 @@ export class GallerySceneController {
     if (typeof gl.fenceSync === 'function') {
       const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
       gl.flush();
+      const startedAt = performance.now();
       const poll = () => {
         if (this.disposed) {
           if (sync) gl.deleteSync(sync);
           return;
         }
         const state = sync ? gl.getSyncParameter(sync, gl.SYNC_STATUS) : gl.SIGNALED;
-        if (state === gl.UNSIGNALED) {
-          this.frameId = window.setTimeout(poll, 5);
+        if (state === gl.UNSIGNALED && performance.now() - startedAt < 450) {
+          this.frameId = window.setTimeout(poll, 16);
         } else {
           if (sync) gl.deleteSync(sync);
           this.frameId = window.setTimeout(cb, 80);
         }
       };
-      this.frameId = window.setTimeout(poll, 5);
+      this.frameId = window.setTimeout(poll, 16);
     } else {
       this.frameId = window.setTimeout(cb, 80);
     }
@@ -1074,11 +1094,7 @@ export class GallerySceneController {
       }
     };
 
-    if (this.isSoftwareGl) {
-      this.frameId = window.setTimeout(tick, 16);
-    } else {
-      this.frameId = requestAnimationFrame(tick);
-    }
+    this.frameId = requestAnimationFrame(tick);
   }
 
   public dispose() {

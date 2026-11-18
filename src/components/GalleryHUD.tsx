@@ -131,10 +131,16 @@ export function GalleryHUD({
         </div>
       )}
 
-      {/* Collapsible Bottom Controls: Compact bottom-left + bottom-right cruceta on mobile; centered dock on desktop */}
+      {/* Collapsible Bottom Controls: Bottom-left cruceta + compact bottom-right dock on mobile; centered dock on desktop */}
       {isMobileTouch ? (
         <div className="pointer-events-none flex w-full items-end justify-between gap-2.5">
-          <div className="pointer-events-none flex min-w-0 flex-col items-start">
+          {!isDockCollapsed && (
+            <div className="pointer-events-auto shrink-0 self-end">
+              <TouchJoystick onMove={(fwd, str) => onWalkChange(fwd, str)} />
+            </div>
+          )}
+
+          <div className="pointer-events-none ml-auto flex min-w-0 flex-col items-end">
             <button
               type="button"
               onClick={onToggleDock}
@@ -214,12 +220,6 @@ export function GalleryHUD({
               </div>
             )}
           </div>
-
-          {!isDockCollapsed && (
-            <div className="pointer-events-auto shrink-0 self-end">
-              <TouchJoystick onMove={(fwd, str) => onWalkChange(fwd, str)} />
-            </div>
-          )}
         </div>
       ) : (
         <div className="pointer-events-none flex flex-col items-center">

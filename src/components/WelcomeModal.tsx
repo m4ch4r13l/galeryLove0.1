@@ -46,7 +46,7 @@ export function WelcomeModal({
 
         <p className="text-xs sm:text-sm leading-relaxed text-stone-300 mb-6">
           {isMobileTouch
-            ? 'Explora nuestra galería 3D en pantalla completa horizontal. Usa la cruceta derecha para caminar y desliza la pantalla para mirar.'
+            ? 'Explora nuestra galería 3D en pantalla completa horizontal. Usa la cruceta izquierda para caminar y desliza la pantalla para mirar.'
             : 'Recorre el pasillo en primera persona, acércate a cada cuadro iluminado y descubre las notas guardadas en su interior.'}
         </p>
 
