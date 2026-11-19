@@ -239,7 +239,7 @@ test('getDragLookSensitivity boosts sensitivity on touch/pen compared to mouse',
   assert.equal(touchSens, penSens);
 });
 
-test('computeDragLookDelta inverts horizontal camera yaw on mobile touch/pen', () => {
+test('computeDragLookDelta inverts horizontal yaw and vertical pitch on mobile touch/pen', () => {
   // Swiping right (dx > 0) on touch produces negative yaw (camera turns right in Three.js)
   const touchRight = computeDragLookDelta(20, 0, 'touch');
   assert.ok(touchRight.yawDelta < 0);
@@ -247,9 +247,18 @@ test('computeDragLookDelta inverts horizontal camera yaw on mobile touch/pen', (
   const penLeft = computeDragLookDelta(-20, 0, 'pen');
   assert.ok(penLeft.yawDelta > 0);
 
-  // Desktop mouse keeps positive yaw on rightward drag
-  const mouseRight = computeDragLookDelta(20, 0, 'mouse');
-  assert.ok(mouseRight.yawDelta > 0);
+  // Swiping up (dy < 0) on touch produces positive pitch (camera looks up toward ceiling)
+  const touchUp = computeDragLookDelta(0, -20, 'touch');
+  assert.ok(touchUp.pitchDelta > 0);
+
+  // Swiping down (dy > 0) on touch/pen produces negative pitch (camera looks down toward floor)
+  const penDown = computeDragLookDelta(0, 20, 'pen');
+  assert.ok(penDown.pitchDelta < 0);
+
+  // Desktop mouse keeps drag-scene polarity on both axes
+  const mouseDrag = computeDragLookDelta(20, -20, 'mouse');
+  assert.ok(mouseDrag.yawDelta > 0);
+  assert.ok(mouseDrag.pitchDelta < 0);
 });
 
 test('shouldSkipWelcomeScreen checks autostart=1 query param', () => {
